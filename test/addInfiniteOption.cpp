@@ -118,8 +118,8 @@ GTEST_TEST(addInfiniteArgument, invalid_longName) {
 GTEST_TEST(addInfiniteArgument, valid_type) {
     mblet::Argparsor argparsor;
     argparsor.addInfiniteArgument("-a", "--abc");
-    EXPECT_EQ(argparsor["-a"].type, mblet::Argparsor::Argument::INFINITE_OPTION);
-    EXPECT_EQ(argparsor["--abc"].type, mblet::Argparsor::Argument::INFINITE_OPTION);
+    EXPECT_EQ(argparsor["-a"].getType(), mblet::Argparsor::Argument::INFINITE_OPTION);
+    EXPECT_EQ(argparsor["--abc"].getType(), mblet::Argparsor::Argument::INFINITE_OPTION);
 }
 
 GTEST_TEST(addInfiniteArgument, valid_size) {

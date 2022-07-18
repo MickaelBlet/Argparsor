@@ -260,7 +260,7 @@ GTEST_TEST(parseArgumentsAlternative, count_argument) {
     mblet::Argparsor argparsor;
     argparsor.addBooleanArgument("-v");
     argparsor.parseArguments(argc, const_cast<char**>(argv), true);
-    EXPECT_EQ(argparsor["-v"].count, 3);
+    EXPECT_EQ(argparsor["-v"].count(), 3);
 }
 
 GTEST_TEST(parseArgumentsAlternative, multi_argument) {
@@ -273,10 +273,10 @@ GTEST_TEST(parseArgumentsAlternative, multi_argument) {
     mblet::Argparsor argparsor;
     argparsor.addMultiArgument("-m");
     argparsor.parseArguments(argc, const_cast<char**>(argv), true);
-    EXPECT_EQ(argparsor["-m"].count, 2);
+    EXPECT_EQ(argparsor["-m"].count(), 2);
     EXPECT_EQ(argparsor["-m"].size(), 2);
-    EXPECT_EQ(argparsor["-m"][0], "0");
-    EXPECT_EQ(argparsor["-m"][1], "0");
+    EXPECT_EQ(argparsor["-m"][0].str(), "0");
+    EXPECT_EQ(argparsor["-m"][1].str(), "0");
 }
 
 GTEST_TEST(parseArgumentsAlternative, infinite_argument) {
@@ -291,10 +291,28 @@ GTEST_TEST(parseArgumentsAlternative, infinite_argument) {
     argparsor.addSimpleArgument("-s");
     argparsor.addInfiniteArgument("-i");
     argparsor.parseArguments(argc, const_cast<char**>(argv), true);
-    EXPECT_EQ(argparsor["-i"].count, 2);
+    EXPECT_EQ(argparsor["-i"].count(), 2);
     EXPECT_EQ(argparsor["-i"].size(), 2);
-    EXPECT_EQ(argparsor["-i"][0], "0");
-    EXPECT_EQ(argparsor["-i"][1], "1");
+    EXPECT_EQ(argparsor["-i"][0].str(), "0");
+    EXPECT_EQ(argparsor["-i"][1].str(), "1");
+}
+
+GTEST_TEST(parseArgumentsAlternative, multi_number_argument) {
+    const char* argv[] = {
+        "binaryname",
+        "-m", "0", "1", "-bbb",
+        "-multi", "0", "1", "--boolean"
+    };
+    const int argc = sizeof(argv) / sizeof(*argv);
+    mblet::Argparsor argparsor;
+    argparsor.addBooleanArgument("-b", "--boolean");
+    argparsor.addSimpleArgument("-s");
+    argparsor.addMultiNumberArgument("-m", "--multi", NULL, false, NULL, 2, 2, "1", "2");
+    argparsor.parseArguments(argc, const_cast<char**>(argv), true);
+    EXPECT_EQ(argparsor["-m"].count(), 2);
+    EXPECT_EQ(argparsor["-m"].size(), 2);
+    EXPECT_EQ(argparsor["-m"][0][0].str(), "0");
+    EXPECT_EQ(argparsor["-m"][0][1].str(), "1");
 }
 
 GTEST_TEST(parseArgumentsAlternative, help) {

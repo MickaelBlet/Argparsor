@@ -115,11 +115,33 @@ GTEST_TEST(addNumberArgument, invalid_longName) {
     }, mblet::Argparsor::ArgumentException);
 }
 
+GTEST_TEST(addNumberArgument, invalid_number_args) {
+    mblet::Argparsor argparsor;
+    EXPECT_THROW({
+        try {
+            argparsor.addNumberArgument(NULL, "--abc", NULL, false, NULL, 2, 1, "");
+        }
+        catch (const mblet::Argparsor::ArgumentException& e) {
+            EXPECT_STREQ(e.what(), "invalid number of argument with number of default argument");
+            throw;
+        }
+    }, mblet::Argparsor::ArgumentException);
+    EXPECT_THROW({
+        try {
+            argparsor.addNumberArgument("-a", NULL, NULL, false, NULL, 2, 1, "");
+        }
+        catch (const mblet::Argparsor::ArgumentException& e) {
+            EXPECT_STREQ(e.what(), "invalid number of argument with number of default argument");
+            throw;
+        }
+    }, mblet::Argparsor::ArgumentException);
+}
+
 GTEST_TEST(addNumberArgument, valid_type) {
     mblet::Argparsor argparsor;
     argparsor.addNumberArgument("-a", "--abc");
-    EXPECT_EQ(argparsor["-a"].type, mblet::Argparsor::Argument::NUMBER_OPTION);
-    EXPECT_EQ(argparsor["--abc"].type, mblet::Argparsor::Argument::NUMBER_OPTION);
+    EXPECT_EQ(argparsor["-a"].getType(), mblet::Argparsor::Argument::NUMBER_OPTION);
+    EXPECT_EQ(argparsor["--abc"].getType(), mblet::Argparsor::Argument::NUMBER_OPTION);
 }
 
 GTEST_TEST(addNumberArgument, valid_size) {
@@ -128,7 +150,7 @@ GTEST_TEST(addNumberArgument, valid_size) {
     EXPECT_EQ(argparsor["-a"].size(), 0);
     EXPECT_EQ(argparsor["--abc"].size(), 0);
     // with default value
-    argparsor.addNumberArgument("-b", "--bcd", "help", false, NULL, 2, "foo", "bar");
+    argparsor.addNumberArgument("-b", "--bcd", "help", false, NULL, 2, 2, "foo", "bar");
     EXPECT_EQ(argparsor["-b"].size(), 2);
     EXPECT_EQ(argparsor["--bcd"].size(), 2);
 }

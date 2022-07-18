@@ -2,6 +2,25 @@
 
 #include "argparsor.h"
 
+GTEST_TEST(parseArguments, short_invalid_option) {
+    const char* argv[] = {
+        "binaryname",
+        "-a"
+    };
+    const int argc = sizeof(argv) / sizeof(*argv);
+    mblet::Argparsor argparsor;
+    EXPECT_THROW({
+        try {
+            argparsor.parseArguments(argc, const_cast<char**>(argv));
+        }
+        catch (const mblet::Argparsor::ParseArgumentException& e) {
+            EXPECT_STREQ(e.argument(), "a");
+            EXPECT_STREQ(e.what(), "invalid option");
+            throw;
+        }
+    }, mblet::Argparsor::ParseArgumentException);
+}
+
 GTEST_TEST(parseArguments, multi_short_invalid_option) {
     const char* argv[] = {
         "binaryname",
@@ -28,7 +47,7 @@ GTEST_TEST(parseArguments, multi_short_not_one_argument_option) {
     };
     const int argc = sizeof(argv) / sizeof(*argv);
     mblet::Argparsor argparsor;
-    argparsor.addSimpleArgument("-a", NULL);
+    argparsor.addArgument("-a");
     EXPECT_THROW({
         try {
             argparsor.parseArguments(argc, const_cast<char**>(argv));
@@ -36,25 +55,6 @@ GTEST_TEST(parseArguments, multi_short_not_one_argument_option) {
         catch (const mblet::Argparsor::ParseArgumentException& e) {
             EXPECT_STREQ(e.argument(), "a");
             EXPECT_STREQ(e.what(), "only last option can be use a parameter");
-            throw;
-        }
-    }, mblet::Argparsor::ParseArgumentException);
-}
-
-GTEST_TEST(parseArguments, short_invalid_option) {
-    const char* argv[] = {
-        "binaryname",
-        "-a"
-    };
-    const int argc = sizeof(argv) / sizeof(*argv);
-    mblet::Argparsor argparsor;
-    EXPECT_THROW({
-        try {
-            argparsor.parseArguments(argc, const_cast<char**>(argv));
-        }
-        catch (const mblet::Argparsor::ParseArgumentException& e) {
-            EXPECT_STREQ(e.argument(), "a");
-            EXPECT_STREQ(e.what(), "invalid option");
             throw;
         }
     }, mblet::Argparsor::ParseArgumentException);
@@ -135,6 +135,26 @@ GTEST_TEST(parseArguments, long_number_option_with_arg) {
         catch (const mblet::Argparsor::ParseArgumentException& e) {
             EXPECT_STREQ(e.argument(), "foo");
             EXPECT_STREQ(e.what(), "option cannot use with only 1 argument");
+            throw;
+        }
+    }, mblet::Argparsor::ParseArgumentException);
+}
+
+GTEST_TEST(parseArguments, long_number_option_with_arg2) {
+    const char* argv[] = {
+        "binaryname",
+        "--foo", "bar"
+    };
+    const int argc = sizeof(argv) / sizeof(*argv);
+    mblet::Argparsor argparsor;
+    EXPECT_THROW({
+        try {
+            argparsor.addNumberArgument(NULL, "--foo", NULL, true, NULL, 2);
+            argparsor.parseArguments(argc, const_cast<char**>(argv));
+        }
+        catch (const mblet::Argparsor::ParseArgumentException& e) {
+            EXPECT_STREQ(e.argument(), "foo");
+            EXPECT_STREQ(e.what(), "bad number of argument");
             throw;
         }
     }, mblet::Argparsor::ParseArgumentException);
@@ -237,6 +257,26 @@ GTEST_TEST(parseArguments, required_long_option) {
     }, mblet::Argparsor::ParseArgumentException);
 }
 
+GTEST_TEST(parseArguments, invalid_bool_with_arg) {
+    const char* argv[] = {
+        "binaryname",
+        "-b=false"
+    };
+    const int argc = sizeof(argv) / sizeof(*argv);
+    mblet::Argparsor argparsor;
+    EXPECT_THROW({
+        try {
+            argparsor.addBooleanArgument("-b", "--bool");
+            argparsor.parseArguments(argc, const_cast<char**>(argv));
+        }
+        catch (const mblet::Argparsor::ParseArgumentException& e) {
+            EXPECT_STREQ(e.argument(), "b");
+            EXPECT_STREQ(e.what(), "option cannot use with argument");
+            throw;
+        }
+    }, mblet::Argparsor::ParseArgumentException);
+}
+
 GTEST_TEST(parseArguments, positional_argument) {
     const char* argv[] = {
         "binaryname",
@@ -249,6 +289,7 @@ GTEST_TEST(parseArguments, positional_argument) {
     argparsor.addPositionalArgument("arg");
     argparsor.parseArguments(argc, const_cast<char**>(argv));
     EXPECT_EQ(argparsor["arg"].str(), "woot");
+    EXPECT_EQ(argparsor.getAdditionalArguments()[0], "woot");
 }
 
 GTEST_TEST(parseArguments, count_argument) {
@@ -260,7 +301,7 @@ GTEST_TEST(parseArguments, count_argument) {
     mblet::Argparsor argparsor;
     argparsor.addBooleanArgument("-v");
     argparsor.parseArguments(argc, const_cast<char**>(argv));
-    EXPECT_EQ(argparsor["-v"].count, 3);
+    EXPECT_EQ(argparsor["-v"].count(), 3);
 }
 
 GTEST_TEST(parseArguments, multi_argument) {
@@ -273,10 +314,10 @@ GTEST_TEST(parseArguments, multi_argument) {
     mblet::Argparsor argparsor;
     argparsor.addMultiArgument("-m");
     argparsor.parseArguments(argc, const_cast<char**>(argv));
-    EXPECT_EQ(argparsor["-m"].count, 2);
+    EXPECT_EQ(argparsor["-m"].count(), 2);
     EXPECT_EQ(argparsor["-m"].size(), 2);
-    EXPECT_EQ(argparsor["-m"][0], "0");
-    EXPECT_EQ(argparsor["-m"][1], "0");
+    EXPECT_EQ(argparsor["-m"][0].str(), "0");
+    EXPECT_EQ(argparsor["-m"][1].str(), "0");
 }
 
 GTEST_TEST(parseArguments, infinite_argument) {
@@ -291,10 +332,10 @@ GTEST_TEST(parseArguments, infinite_argument) {
     argparsor.addSimpleArgument("-s");
     argparsor.addInfiniteArgument("-i");
     argparsor.parseArguments(argc, const_cast<char**>(argv));
-    EXPECT_EQ(argparsor["-i"].count, 2);
+    EXPECT_EQ(argparsor["-i"].count(), 2);
     EXPECT_EQ(argparsor["-i"].size(), 2);
-    EXPECT_EQ(argparsor["-i"][0], "0");
-    EXPECT_EQ(argparsor["-i"][1], "1");
+    EXPECT_EQ(argparsor["-i"][0].str(), "0");
+    EXPECT_EQ(argparsor["-i"][1].str(), "1");
 }
 
 GTEST_TEST(parseArguments, help) {

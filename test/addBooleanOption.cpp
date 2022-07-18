@@ -118,13 +118,6 @@ GTEST_TEST(addBooleanArgument, invalid_longName) {
 GTEST_TEST(addBooleanArgument, valid_type) {
     mblet::Argparsor argparsor;
     argparsor.addBooleanArgument("-a", "--abc");
-    EXPECT_EQ(argparsor["-a"].type, mblet::Argparsor::Argument::BOOLEAN_OPTION);
-    EXPECT_EQ(argparsor["--abc"].type, mblet::Argparsor::Argument::BOOLEAN_OPTION);
-}
-
-GTEST_TEST(addBooleanArgument, valid_size) {
-    mblet::Argparsor argparsor;
-    argparsor.addBooleanArgument("-a", "--abc");
-    EXPECT_EQ(argparsor["-a"].size(), 0);
-    EXPECT_EQ(argparsor["--abc"].size(), 0);
+    EXPECT_EQ(argparsor["-a"].getType(), mblet::Argparsor::Argument::BOOLEAN_OPTION);
+    EXPECT_EQ(argparsor["--abc"].getType(), mblet::Argparsor::Argument::BOOLEAN_OPTION);
 }

@@ -27,6 +27,7 @@
 #define _MBLET_ARGPARSOR_HPP_
 
 #include <map>
+#include <cstdarg>
 #include <string>
 #include <vector>
 #include <list>
@@ -100,16 +101,20 @@ class Argparsor {
     /**
      * @brief Argument object
      */
-    class Argument {
+    class Argument : public std::vector<Argument> {
 
       public:
 
         enum Type {
+            NONE = 0,
             BOOLEAN_OPTION,
+            REVERSE_BOOLEAN_OPTION,
             SIMPLE_OPTION,
             NUMBER_OPTION,
             INFINITE_OPTION,
             MULTI_OPTION,
+            MULTI_INFINITE_OPTION,
+            MULTI_NUMBER_OPTION,
             POSITIONAL_ARGUMENT
         };
 
@@ -118,61 +123,123 @@ class Argparsor {
          */
         Argument();
 
-        /**
-         * @brief Destroy the Argument object
-         */
-        ~Argument();
-
-        /**
-         * @brief Get arguments element at index
-         *
-         * @param index
-         * @return const String&
-         */
-        inline const std::string& at(std::size_t index) const {
-            return arguments.at(index);
+        inline bool isExist() const {
+            return _isExist;
         }
 
-        /**
-         * @brief Get size of arguments
-         *
-         * @return std::size_t
-         */
-        inline std::size_t size() const {
-            return arguments.size();
+        inline bool isRequired() const {
+            return _isRequired;
         }
 
-        /**
-         * @brief Tranform argument to const string
-         *
-         * @return std::string
-         */
+        inline std::size_t count() const {
+            return _count;
+        }
+
+        inline std::size_t nbArgs() const {
+            return _nbArgs;
+        }
+
+        inline Type getType() const {
+            return _type;
+        }
+
+        inline const std::string& getHelp() const {
+            return _help;
+        }
+
+        inline const std::string& getArgHelp() const {
+            return _argHelp;
+        }
+
+        inline const std::string& getArgument() const {
+            return _argument;
+        }
+
+        inline const std::string& getDefaultValue() const {
+            return _defaultValue;
+        }
+
+        inline void setIsExist(bool isExist) {
+            _isExist = isExist;
+        }
+
+        inline void setIsRequired(bool isRequired) {
+            _isRequired = isRequired;
+        }
+
+        inline void addCount() {
+            ++_count;
+        }
+
+        inline void setNbArgs(std::size_t nbArgs) {
+            _nbArgs = nbArgs;
+        }
+
+        inline void setType(enum Type type) {
+            _type = type;
+        }
+
+        inline void setHelp(const std::string& help) {
+            _help = help;
+        }
+
+        inline void setArgHelp(const std::string& argHelp) {
+            _argHelp = argHelp;
+        }
+
+        inline void setArgument(const std::string& argument) {
+            _argument = argument;
+        }
+
+        inline void setDefaultValue(const std::string& defaultValue) {
+            _defaultValue = defaultValue;
+        }
+
+        inline bool boolean() const {
+            if (_type == BOOLEAN_OPTION) {
+                return _isExist;
+            }
+            else if (_type == REVERSE_BOOLEAN_OPTION) {
+                return !_isExist;
+            }
+            else {
+                throw Exception("convertion to bool not authorized");
+            }
+        }
+
         inline std::string str() const {
-            switch (type) {
-                case BOOLEAN_OPTION:
-                    return ((isExist) ? "true" : "false");
-                case SIMPLE_OPTION:
-                case POSITIONAL_ARGUMENT:
-                    if (arguments.size() > 0) {
-                        return *(arguments.begin());
-                    }
-                    else {
-                        return "";
-                    }
-                case NUMBER_OPTION:
-                case MULTI_OPTION:
-                case INFINITE_OPTION: {
-                    std::ostringstream oss("");
-                    for (std::size_t i = 0 ; i < arguments.size() ; ++i) {
+            if (_type == BOOLEAN_OPTION) {
+                return ((_isExist) ? "true" : "false");
+            }
+            else if (_type == REVERSE_BOOLEAN_OPTION) {
+                return ((_isExist) ? "false" : "true");
+            }
+            else {
+                std::ostringstream oss("");
+                if (!empty()) {
+                    for (std::size_t i = 0 ; i < size() ; ++i) {
                         if (i > 0) {
                             oss << ", ";
                         }
-                        oss << arguments[i];
+                        if (!at(i).empty()) {
+                            oss << "(";
+                            for (std::size_t j = 0 ; j < at(i).size() ; ++j) {
+                                if (j > 0) {
+                                    oss << ", ";
+                                }
+                                oss << at(i).at(j).getArgument();
+                            }
+                            oss << ")";
+                        }
+                        else {
+                            oss << at(i).getArgument();
+                        }
                     }
-                    return oss.str();
                 }
-                default:
-                    return "unknown";
+                else {
+                    oss << _argument;
+                }
+                return oss.str();
             }
         }
 
@@ -182,60 +249,94 @@ class Argparsor {
          * @return true if exist or false if not exist
          */
         inline operator bool() const {
-            return isExist;
+            return isExist();
         }
 
         /**
-         * @brief override std::string operator
+         * @brief tranform to string
          *
-         * @return tranform std::string of value array
+         * @return std::string
          */
         inline operator std::string() const {
             return str();
         }
 
         /**
-         * @brief override std::vector<std::string> operator
+         * @brief tranform to vector of string
          *
-         * @return const ref of value array
+         * @return std::vector<std::string>
          */
-        inline operator const std::vector<std::string>&() const {
-            return arguments;
+        inline operator std::vector<std::string>() const {
+            if (_type == NUMBER_OPTION || _type == MULTI_OPTION ||
+                _type == INFINITE_OPTION || _type == MULTI_INFINITE_OPTION) {
+                std::vector<std::string> ret;
+                for (std::size_t i = 0 ; i < size() ; ++i) {
+                    ret.push_back(at(i).getArgument());
+                }
+                return ret;
+            }
+            else {
+                throw Exception("convertion to vector of string not authorized");
+            }
         }
 
         /**
-         * @brief Override bracket operator
+         * @brief tranform to vector of vector of string
+         *
+         * @return std::vector<std::vector<std::string> >
+         */
+        inline operator std::vector<std::vector<std::string> >() const {
+            if (_type == MULTI_NUMBER_OPTION) {
+                std::vector<std::vector<std::string> > ret;
+                for (std::size_t i = 0 ; i < size() ; ++i) {
+                    ret.push_back(std::vector<std::string>());
+                    for (std::size_t j = 0 ; j < at(i).size() ; ++j) {
+                        ret[i].push_back(at(i).at(j).getArgument());
+                    }
+                }
+                return ret;
+            }
+            else {
+                throw Exception("convertion to vector of vector of string not authorized");
+            }
+        }
+
+        /**
+         * @brief overide brakcet operator
          *
          * @param index
-         * @return const String&
+         * @return const Argument&
          */
-        inline const std::string& operator[](std::size_t index) const {
+        inline const Argument& operator[](unsigned long index) const {
             return at(index);
         }
 
         /**
-         * @brief Friend function for convert String object to ostream
+         * @brief Friend function for convert Argument object to ostream
          *
          * @param os
-         * @param arg
+         * @param map
          * @return std::ostream&
          */
-        inline friend std::ostream& operator<<(std::ostream& os, const Argument& arg) {
-            os << arg.str();
+        inline friend std::ostream& operator<<(std::ostream& os, const Argument& map) {
+            os << map.str();
             return os;
         }
 
-        enum Type type;
-        bool isExist;
-        std::size_t count;
-        bool isRequired;
-        std::string shortName;
-        std::string longName;
-        std::string help;
-        std::size_t nbArgs;
-        std::string argHelp;
-        std::vector<std::string> defaultValues;
-        std::vector<std::string> arguments;
+        std::vector<std::string> names;
+        bool _isExist;
+        bool _isRequired;
+        std::size_t _count;
+        std::size_t _nbArgs;
+        enum Type _type;
+        std::string _help;
+        std::string _argHelp;
+        std::string _argument;
+        std::string _defaultValue;
+
+      private:
+
+
     };
 
     /**
@@ -319,15 +420,6 @@ class Argparsor {
     }
 
     /**
-     * @brief Set the help argument
-     *
-     * @param shortName
-     * @param longName
-     * @param help
-     */
-    void setHelpArgument(const char* shortName = NULL, const char* longName = NULL, const char* help = NULL);
-
-    /**
      * @brief Set the usage message
      *
      * @param usage
@@ -364,110 +456,29 @@ class Argparsor {
      */
     void parseArguments(int argc, char* argv[], bool alternative = false, bool strict = false);
 
-    /**
-     * @brief Add boolean argument with short and long name
-     *
-     * @param shortName
-     * @param longName
-     * @param help
-     * @param isRequired
-     */
-    void addBooleanArgument(const char* shortName, const char* longName = NULL, const char* help = NULL,
-                            bool isRequired = false);
+    void addArgument(const std::vector<std::string>& nameOrFlags, const char* actionOrDefault = NULL,
+                     const char* help = NULL, bool isRequired = false, const char* argsHelp = NULL,
+                     std::size_t nbArgs = 0, const std::vector<std::string>& defaultArgs = std::vector<std::string>());
 
     /**
-     * @brief Add simple argument with short and long name
+     * @brief add argument
      *
-     * @param shortName
-     * @param longName
+     * @param nameOrFlags separate by space or comma
+     * @param actionOrDefault action list [store_true, store_false, append, extend, version]
      * @param help
      * @param isRequired
-     * @param argHelp
-     * @param defaultValue
-     */
-    void addSimpleArgument(const char* shortName, const char* longName = NULL, const char* help = NULL,
-                           bool isRequired = false,
-                           const char* argHelp = NULL, const char* defaultValue = NULL);
-
-
-    /**
-     * @brief Add number argument with short and long name
-     *
-     * @param shortName
-     * @param longName
-     * @param help
-     * @param isRequired
-     * @param argHelp
+     * @param argsHelp
      * @param nbArgs
-     * @param ... default argument value (const char*)
-     */
-    void addNumberArgument(const char* shortName, const char* longName = NULL, const char* help = NULL,
-                           bool isRequired = false,
-                           const char* argHelp = NULL, std::size_t nbArgs = 0, ...);
-
-    /**
-     * @brief Add infinite argument with short and long name
-     *
-     * @param shortName
-     * @param longName
-     * @param help
-     * @param isRequired
-     * @param argHelp
      * @param nbDefaultArgs
-     * @param ... default argument value (const char*)
+     * @param ...
      */
-    void addInfiniteArgument(const char* shortName, const char* longName = NULL, const char* help = NULL,
-                             bool isRequired = false,
-                             const char* argHelp = NULL, std::size_t nbDefaultArgs = 0, ...);
+    void addArgument(const char* nameOrFlags, const char* actionOrDefault = NULL, const char* help = NULL,
+                     bool isRequired = false, const char* argsHelp = NULL, std::size_t nbArgs = 0,
+                     std::size_t nbDefaultArgs = 0, ...);
 
-    /**
-     * @brief Add multi argument from short and long name with list argument
-     *
-     * @param shortName
-     * @param longName
-     * @param help
-     * @param isRequired
-     * @param argHelp
-     * @param nbDefaultArgs
-     * @param ... default argument value (const char*)
-     */
-    void addMultiArgument(const char* shortName, const char* longName = NULL, const char* help = NULL,
-                          bool isRequired = false,
-                          const char* argHelp = NULL, std::size_t nbDefaultArgs = 0, ...);
-
-    /**
-     * @brief Add positionnal argument
-     *
-     * @param name
-     * @param help
-     * @param isRequired
-     * @param argName
-     * @param defaultValue
-     */
-    void addPositionalArgument(const char* name, const char* help = NULL, bool isRequired = false,
-                               const char* defaultValue = NULL);
+    std::string dump();
 
   private:
-
-    /**
-     * @brief Create a argument with check format of shortName and longName
-     *
-     * @param shortName
-     * @param longName
-     * @param help
-     * @param isRequired
-     * @return Argument&
-     */
-    Argument& createArgument(const char* shortName, const char* longName, const char* help, bool isRequired);
-
-    /**
-     * @brief Get short or long argument
-     *
-     * @param maxIndex
-     * @param argv
-     * @param index
-     */
-    void parseAlternativeArgument(int maxIndex, char* argv[], int* index);
 
     /**
      * @brief Get the short argument decompose multi short argument
@@ -475,8 +486,9 @@ class Argparsor {
      * @param maxIndex
      * @param argv
      * @param index
+     * @param alternative
      */
-    void parseShortArgument(int maxIndex, char* argv[], int* index);
+    void parseShortArgument(int maxIndex, char* argv[], int* index, bool alternative);
 
     /**
      * @brief Get the long argument
@@ -484,8 +496,9 @@ class Argparsor {
      * @param maxIndex
      * @param argv
      * @param index
+     * @param alternative
      */
-    void parseLongArgument(int maxIndex, char* argv[], int* index);
+    void parseLongArgument(int maxIndex, char* argv[], int* index, bool alternative);
 
     /**
      * @brief Get the argument
@@ -497,9 +510,10 @@ class Argparsor {
      * @param option
      * @param arg
      * @param argument
+     * @param alternative
      */
     void parseArgument(int maxIndex, char* argv[], int* index, bool hasArg, const char* option, const char* arg,
-                       Argument* argument);
+                       Argument* argument, bool alternative);
 
     /**
      * @brief Get the positionnal argument
@@ -514,10 +528,11 @@ class Argparsor {
      * @brief Check end of infinite parsing
      *
      * @param argument
+     * @param alternative
      * @return true
      * @return false
      */
-    bool endOfInfiniteArgument(const char* argument);
+    bool endOfInfiniteArgument(const char* argument, bool alternative);
 
     std::string _binaryName;
 

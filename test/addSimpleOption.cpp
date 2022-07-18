@@ -118,17 +118,13 @@ GTEST_TEST(addSimpleArgument, invalid_longName) {
 GTEST_TEST(addSimpleArgument, valid_type) {
     mblet::Argparsor argparsor;
     argparsor.addSimpleArgument("-a", "--abc");
-    EXPECT_EQ(argparsor["-a"].type, mblet::Argparsor::Argument::SIMPLE_OPTION);
-    EXPECT_EQ(argparsor["--abc"].type, mblet::Argparsor::Argument::SIMPLE_OPTION);
+    EXPECT_EQ(argparsor["-a"].getType(), mblet::Argparsor::Argument::SIMPLE_OPTION);
+    EXPECT_EQ(argparsor["--abc"].getType(), mblet::Argparsor::Argument::SIMPLE_OPTION);
 }
 
-GTEST_TEST(addSimpleArgument, valid_size) {
+GTEST_TEST(addSimpleArgument, default_value) {
     mblet::Argparsor argparsor;
-    argparsor.addSimpleArgument("-a", "--abc");
-    EXPECT_EQ(argparsor["-a"].size(), 0);
-    EXPECT_EQ(argparsor["--abc"].size(), 0);
-    // with default value
-    argparsor.addSimpleArgument("-b", "--bcd", "help", false, "BCD", "foo");
-    EXPECT_EQ(argparsor["-b"].size(), 1);
-    EXPECT_EQ(argparsor["--bcd"].size(), 1);
+    argparsor.addSimpleArgument("-a", "--abc", NULL, false, "A", "default");
+    EXPECT_EQ(argparsor["-a"].str(), "default");
+    EXPECT_EQ(argparsor["--abc"].str(), "default");
 }
